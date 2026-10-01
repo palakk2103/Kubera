@@ -490,6 +490,11 @@ async function main() {
   }
 }
 
-// Start the application
-main();
+// Start the application if executed directly
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main();
+}
+
+export { createApp, main };
+
 
