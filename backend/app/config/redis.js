@@ -17,45 +17,21 @@ const REDIS_ERROR_LOG_INTERVAL_MS = () =>
 export function isRedisEnabled() {
   const d = process.env.REDIS_DISABLED;
   const e = process.env.REDIS_ENABLED;
-  const isProduction = process.env.NODE_ENV === "production";
+
+  // Fully disable in Vercel/serverless environments or when flagged
+  if (process.env.VERCEL || d === "true" || d === "1" || e === "false" || e === "0") {
+    return false;
+  }
 
   // Default: disable Redis in Jest to avoid open handles + noisy retries.
-  // Opt-in by setting REDIS_ENABLED=true.
-  if (process.env.NODE_ENV === "test" && !(e === "true" || e === "1")) return false;
-  if (d === "true" || d === "1") {
-    if (isProduction) {
-      console.warn(
-        "[Redis] WARNING: Redis is disabled via REDIS_DISABLED=true in production. Fallback queue stubs and MongoDB timers will be used."
-      );
-    }
-    return false;
-  }
-  if (e === "false" || e === "0") {
-    if (isProduction) {
-      console.warn(
-        "[Redis] WARNING: Redis is disabled via REDIS_ENABLED=false in production. Fallback queue stubs and MongoDB timers will be used."
-      );
-    }
+  if (process.env.NODE_ENV === "test") return false;
+
+  const isProduction = process.env.NODE_ENV === "production";
+  if (isProduction && !process.env.REDIS_URL && !process.env.REDIS_HOST) {
     return false;
   }
 
-  // In production, verify Redis configuration is present
-  if (isProduction) {
-    const hasConfig = !!(
-      process.env.REDIS_URL ||
-      process.env.REDIS_HOST ||
-      e === "true" ||
-      e === "1"
-    );
-    if (!hasConfig) {
-      console.warn(
-        "[Redis] WARNING: No REDIS_URL or REDIS_HOST provided in production. Fallback queue stubs will be used."
-      );
-      return false;
-    }
-  }
-
-  return true;
+  return Boolean(process.env.REDIS_URL || process.env.REDIS_HOST);
 }
 
 /**
