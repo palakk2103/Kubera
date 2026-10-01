@@ -19,7 +19,8 @@ import { structuredRequestLogger, correlationIdMiddleware } from "./app/middlewa
 import { trackInFlightRequests } from "./app/middleware/metricsMiddleware.js";
 import { errorHandler, notFoundHandler } from "./app/middleware/errorMiddleware.js";
 import { getProcessRole, isComponentEnabled } from "./app/core/processRole.js";
-import { startup } from "./app/core/startup.js";
+import { startup, connectMongoDB } from "./app/core/startup.js";
+import { assertAllModelsRegistered } from "./app/core/modelRegistry.js";
 import {
   registerShutdownHandlers,
   registerHttpServer,
@@ -490,11 +491,40 @@ async function main() {
   }
 }
 
+let _appInstance = null;
+let _dbPromise = null;
+
+async function serverlessHandler(req, res) {
+  if (!process.env.PROCESS_ROLE) {
+    process.env.PROCESS_ROLE = "api";
+  }
+  if (!_dbPromise) {
+    _dbPromise = connectMongoDB().catch((err) => {
+      _dbPromise = null;
+      console.error("[Serverless] DB Connection error:", err.message);
+      throw err;
+    });
+  }
+  await _dbPromise;
+
+  if (!_appInstance) {
+    try {
+      assertAllModelsRegistered();
+    } catch (e) {
+      console.warn("[Serverless] Model registry check:", e.message);
+    }
+    _appInstance = createApp();
+  }
+  return _appInstance(req, res);
+}
+
 // Start the application if executed directly
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   main();
 }
 
-export { createApp, main };
+export { createApp, main, serverlessHandler };
+export default serverlessHandler;
+
 
 
