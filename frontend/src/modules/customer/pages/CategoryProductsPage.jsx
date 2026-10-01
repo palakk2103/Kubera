@@ -1,0 +1,248 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { ChevronLeft, Heart, Search, Minus, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
+import { useToast } from '@shared/components/ui/Toast';
+import { cn } from '@/lib/utils';
+import { applyCloudinaryTransform, DEFAULT_CATEGORY_IMAGE, DEFAULT_PRODUCT_IMAGE, getRealCategoryFallback } from '@/core/utils/imageUtils';
+
+import ProductCard from '../components/shared/ProductCard';
+import ProductDetailSheet from '../components/shared/ProductDetailSheet';
+import { useProductDetail } from '../context/ProductDetailContext';
+import { customerApi } from '../services/customerApi';
+import MiniCart from '../components/shared/MiniCart';
+import SectionRenderer from "../components/experience/SectionRenderer";
+import { useLocation as useAppLocation } from '../context/LocationContext';
+import { useSettings } from '@core/context/SettingsContext';
+import Lottie from 'lottie-react';
+
+const categoryProductsMemoryCache = new Map();
+
+const CategoryProductsPage = () => {
+    const { categoryName: catId } = useParams();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { currentLocation } = useAppLocation();
+    const { settings } = useSettings();
+    const initialSubcategoryId = location.state?.activeSubcategoryId || 'all';
+    const { isOpen: isProductDetailOpen } = useProductDetail();
+
+    const cachedEntry = categoryProductsMemoryCache.get(catId);
+
+    const [selectedSubCategory, setSelectedSubCategory] = useState(initialSubcategoryId);
+    const [category, setCategory] = useState(() => cachedEntry?.category || null);
+    const [subCategories, setSubCategories] = useState(() => cachedEntry?.subCategories || [{ id: 'all', name: 'All', icon: DEFAULT_CATEGORY_IMAGE }]);
+    const [products, setProducts] = useState(() => cachedEntry?.products || []);
+    const [isLoading, setIsLoading] = useState(() => !cachedEntry);
+    const [noServiceData, setNoServiceData] = useState(null);
+
+    // Dynamically load no-service Lottie on mount
+    useEffect(() => {
+        import('@/assets/lottie/animation.json')
+            .then((m) => setNoServiceData(m.default))
+            .catch(() => {});
+    }, []);
+
+    const fetchData = async (showLoader = false) => {
+        if (showLoader) setIsLoading(true);
+        try {
+            const hasValidLocation =
+                Number.isFinite(currentLocation?.latitude) &&
+                Number.isFinite(currentLocation?.longitude);
+
+            const prodParams = { categoryId: catId };
+            if (hasValidLocation) {
+                prodParams.lat = currentLocation.latitude;
+                prodParams.lng = currentLocation.longitude;
+            }
+
+            // Fetch products and categories in parallel instead of sequentially
+            const [prodRes, catRes] = await Promise.all([
+                customerApi.getProducts(prodParams),
+                customerApi.getCategories({ tree: true }),
+            ]);
+
+            let fetchedProducts = [];
+            let fetchedCat = category;
+            let fetchedSubs = subCategories;
+
+            if (prodRes.data.success) {
+                const rawResult = prodRes.data.result;
+                const dbProds = Array.isArray(prodRes.data.results)
+                    ? prodRes.data.results
+                    : Array.isArray(rawResult?.items)
+                    ? rawResult.items
+                    : Array.isArray(rawResult)
+                    ? rawResult
+                    : [];
+
+                const formattedProds = dbProds.map(p => ({
+                    ...p,
+                    id: p._id,
+                    image:
+                      p.mainImage ||
+                      p.image ||
+                      DEFAULT_PRODUCT_IMAGE,
+                    price: p.salePrice || p.price,
+                    originalPrice: p.price,
+                    weight: p.weight || "1 unit",
+                    deliveryTime: p.deliveryTime
+                }));
+                fetchedProducts = Array.isArray(formattedProds) ? formattedProds : [];
+                setProducts(fetchedProducts);
+            } else {
+                setProducts([]);
+            }
+
+            if (catRes.data.success) {
+                const tree = catRes.data.results || catRes.data.result || [];
+                let currentCat = null;
+                for (const header of tree) {
+                    const found = (header.children || []).find(c => c._id === catId);
+                    if (found) {
+                        currentCat = found;
+                        break;
+                    }
+                }
+
+                if (currentCat) {
+                    fetchedCat = currentCat;
+                    setCategory(currentCat);
+                    const subs = (currentCat.children || []).map(s => ({
+                        id: s._id,
+                        name: s.name,
+                        icon: s.image || getRealCategoryFallback(s.name)
+                    }));
+                    fetchedSubs = [{ id: 'all', name: 'All', icon: getRealCategoryFallback(currentCat.name) }, ...subs];
+                    setSubCategories(fetchedSubs);
+                }
+            }
+
+            // Save in memory cache
+            categoryProductsMemoryCache.set(catId, {
+                category: fetchedCat,
+                subCategories: fetchedSubs,
+                products: fetchedProducts,
+            });
+        } catch (error) {
+            console.error("Error fetching category data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const cached = categoryProductsMemoryCache.get(catId);
+        if (cached && cached.products && cached.products.length > 0) {
+            setCategory(cached.category);
+            setSubCategories(cached.subCategories);
+            setProducts(cached.products);
+            setIsLoading(false);
+            fetchData(false);
+        } else {
+            fetchData(true);
+        }
+        setSelectedSubCategory(location.state?.activeSubcategoryId || 'all');
+    }, [catId, location.state?.activeSubcategoryId, currentLocation?.latitude, currentLocation?.longitude]);
+
+    const safeProducts = Array.isArray(products) ? products : [];
+
+    const filteredProducts = safeProducts.filter(p =>
+        selectedSubCategory === 'all' || p.subcategoryId?._id === selectedSubCategory || p.subcategoryId === selectedSubCategory
+    );
+
+    const productsById = React.useMemo(() => {
+        const map = {};
+        safeProducts.forEach(p => {
+            map[p._id || p.id] = p;
+        });
+        return map;
+    }, [safeProducts]);
+
+    return (
+        <div className="bg-white min-h-screen w-full max-w-md mx-auto relative font-sans pb-24">
+            {/* Header */}
+            <header className="sticky top-0 z-50 bg-white border-b border-gray-100 h-14 flex items-center justify-center px-4">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="absolute left-4 p-1 hover:bg-gray-50 rounded-full transition-colors flex items-center justify-center"
+                >
+                    <ChevronLeft size={24} className="text-gray-900" />
+                </button>
+                <h1 className="text-base font-bold text-gray-800 tracking-tight truncate px-8">
+                    {category?.name || catId}
+                </h1>
+            </header>
+
+            {(safeProducts.length === 0 && !isLoading) ? (
+                    <div className="w-full flex-1 py-20 px-8 flex flex-col items-center justify-center text-center">
+                        <div className="w-64 h-64 mb-6">
+                            {noServiceData ? (
+                                <Lottie animationData={noServiceData} loop={true} />
+                            ) : (
+                                <div className="w-64 h-64" />
+                            )}
+                        </div>
+                        <h3 className="text-2xl font-[1000] text-slate-800 tracking-tight mb-3">
+                            No Products Found
+                        </h3>
+                        <p className="text-slate-500 font-medium text-sm max-w-[280px] mb-8 leading-relaxed">
+                            We are adding more products to this category soon. Please check back later!
+                        </p>
+                        <button 
+                            onClick={() => navigate('/')}
+                            className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-black/10"
+                        >
+                            Explore Home
+                        </button>
+                    </div>
+            ) : (
+                <div>
+                    {/* Horizontal Tabs */}
+                    <div className="sticky top-14 z-40 bg-white border-b border-gray-100 shadow-sm px-4 py-2.5 flex overflow-x-auto hide-scrollbar gap-3 w-full">
+                                {subCategories.map((cat) => (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setSelectedSubCategory(cat.id)}
+                                        className={cn(
+                                            "flex items-center px-5 py-2 rounded-xl whitespace-nowrap font-bold text-sm transition-all duration-200",
+                                            selectedSubCategory === cat.id
+                                                ? "bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]"
+                                                : "bg-gray-100/80 text-gray-600 hover:bg-gray-200"
+                                        )}
+                                    >
+                                        {cat.name}
+                                    </button>
+                                ))}
+                            </div>
+
+                    {/* Products Grid */}
+                    <div className="px-3 pt-2 w-full">
+                        {filteredProducts.map((product) => (
+                            <ProductCard key={product.id} product={product} layout="list" />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <MiniCart />
+            <ProductDetailSheet />
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                    .hide-scrollbar::-webkit-scrollbar {
+                        display: none;
+                    }
+                    .hide-scrollbar {
+                        -ms-overflow-style: none;
+                        scrollbar-width: none;
+                    }
+                `}} />
+        </div>
+    );
+};
+
+export default CategoryProductsPage;
+

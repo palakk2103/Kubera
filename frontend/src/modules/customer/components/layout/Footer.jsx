@@ -1,0 +1,133 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Facebook, Twitter, Instagram, Youtube, Mail, MapPin, Phone } from 'lucide-react';
+import Logo from '@/assets/Logo.png';
+import { useSettings } from '@core/context/SettingsContext';
+
+const Footer = () => {
+    const { settings } = useSettings();
+    const logoUrl = settings?.logoUrl;
+    const primaryColor = settings?.primaryColor || 'var(--primary)';
+
+    return (
+        <footer className="relative bg-[#051108] pt-20 pb-10 mt-20 text-slate-300 md:bg-gradient-to-br md:from-brand-700 md:via-brand-800 md:to-brand-900 md:pt-32 md:pb-16 md:mt-32 overflow-hidden font-['Outfit',_sans-serif]">
+            {/* Subtle Texture/Glow Overlay */}
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
+                <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full opacity-30 blur-[150px]" style={{ backgroundColor: primaryColor }} />
+                <div className="absolute -bottom-24 -left-24 w-96 h-96 rounded-full opacity-20 blur-[150px]" style={{ backgroundColor: primaryColor }} />
+            </div>
+
+            {/* Top Curved Divider */}
+            <div className="absolute top-[-1px] left-0 w-full overflow-hidden leading-[0]">
+                <svg className="relative block w-[calc(100%+1.3px)] h-[25px] md:h-[60px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                    <path d="M0,0 Q600,120 1200,0 V0 H0 Z" className="fill-white"></path>
+                </svg>
+            </div>
+
+            <div className="container mx-auto px-4 z-10 relative">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-16">
+
+                    {/* Brand Info */}
+                    <div className="space-y-4 md:space-y-8">
+                        <div className="flex items-center">
+                            <img src={logoUrl || null} alt={`${settings?.appName || 'App'} Logo`} loading="lazy" className="h-12 md:h-16 w-auto object-contain" />
+                        </div>
+                        <p className="text-sm leading-relaxed md:text-base md:leading-loose text-white/90 md:max-w-xs transition-opacity hover:opacity-100 font-medium">
+                            Your daily dose of fresh, organic, and healthy products delivered straight to your door. Freshness guaranteed.
+                        </p>
+                        <div className="flex gap-4">
+                            {settings?.facebook && <a href={settings.facebook} target="_blank" rel="noopener noreferrer" className="p-2 bg-white/10 text-white rounded-full transition-all group active:scale-95 hover:opacity-90"><Facebook size={18} /></a>}
+                            {settings?.twitter && <a href={settings.twitter} target="_blank" rel="noopener noreferrer" className="p-2 bg-white/10 text-white rounded-full transition-all group active:scale-95 hover:opacity-90"><Twitter size={18} /></a>}
+                            {settings?.instagram && <a href={settings.instagram} target="_blank" rel="noopener noreferrer" className="p-2 bg-white/10 text-white rounded-full transition-all group active:scale-95 hover:opacity-90"><Instagram size={18} /></a>}
+                            {settings?.youtube && <a href={settings.youtube} target="_blank" rel="noopener noreferrer" className="p-2 bg-white/10 text-white rounded-full transition-all group active:scale-95 hover:opacity-90"><Youtube size={18} /></a>}
+                        </div>
+                    </div>
+
+                    {/* Quick Links */}
+                    <div className="md:pt-4">
+                        <h3 className="text-white font-bold text-lg mb-4 md:text-xl md:font-black md:uppercase md:tracking-widest md:mb-8 flex items-center gap-2">
+                            <span className="h-1 w-4 hidden md:block" style={{ backgroundColor: primaryColor }}></span> Quick Links
+                        </h3>
+                        <ul className="space-y-2 md:space-y-4">
+                            <li><Link to="/" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Home</Link></li>
+                            <li><Link to="/about" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>About Us</Link></li>
+                            <li><Link to="/categories" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Categories</Link></li>
+                            <li><Link to="/contact-us" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Contact Us</Link></li>
+                            <li><Link to="/support" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Help & Support</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Policies */}
+                    <div className="md:pt-4">
+                        <h3 className="text-white font-bold text-lg mb-4 md:text-xl md:font-black md:uppercase md:tracking-widest md:mb-8 flex items-center gap-2">
+                            <span className="h-1 w-4 hidden md:block" style={{ backgroundColor: primaryColor }}></span> Policies & Info
+                        </h3>
+                        <ul className="space-y-2 md:space-y-4">
+                            <li><Link to="/privacy-policy" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Privacy Policy</Link></li>
+                            <li><Link to="/terms" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Terms & Conditions</Link></li>
+                            <li><Link to="/shipping-policy" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Shipping Policy</Link></li>
+                            <li><Link to="/cancellation-refund-policy" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Cancellation & Refund</Link></li>
+                            <li><Link to="/support" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Help & Support</Link></li>
+                            <li><Link to="/contact-us" className="hover:text-brand-300 transition-colors md:text-base md:font-semibold flex items-center group text-white"><span className="hidden md:block w-0 h-px bg-white group-hover:w-4 group-hover:mr-2 transition-all"></span>Contact Us</Link></li>
+                        </ul>
+                    </div>
+
+                    {/* Contact Info */}
+                    <div className="md:pt-4">
+                        <h3 className="text-white font-bold text-lg mb-4 md:text-xl md:font-black md:uppercase md:tracking-widest md:mb-8 flex items-center gap-2">
+                            <span className="h-1 w-4 hidden md:block" style={{ backgroundColor: primaryColor }}></span> Contact Us
+                        </h3>
+                        <ul className="space-y-4 md:space-y-6">
+                            <li className="flex items-start gap-3 md:gap-5 group">
+                                <div className="hidden md:flex h-12 w-12 rounded-xl bg-white/10 items-center justify-center text-white transition-all shrink-0 group-hover:opacity-90"><MapPin size={22} /></div>
+                                <MapPin className="mt-1 shrink-0 md:hidden" size={18} style={{ color: primaryColor }} />
+                                <div className="text-white md:pt-0.5 leading-relaxed">
+                                    <h4 className="text-white font-semibold text-sm md:text-base tracking-wide uppercase mb-1">
+                                        {settings?.companyName || 'JAINA ENTERPRISES'}
+                                    </h4>
+                                    <div className="text-slate-200 text-xs md:text-sm font-medium leading-relaxed space-y-0.5">
+                                        {settings?.address ? (
+                                            <div className="whitespace-pre-line">{settings.address}</div>
+                                        ) : (
+                                            <>
+                                                <p>Flat/Door/Block No. 00, SITA CENTRAL SCHOOL,</p>
+                                                <p>Karera, Road/Street/Lane KARERA,</p>
+                                                <p>District SHIVPURI, MADHYA PRADESH - 473660</p>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </li>
+                            <li className="flex items-center gap-3 md:gap-5 group">
+                                <div className="hidden md:flex h-12 w-12 rounded-xl bg-white/10 items-center justify-center text-white transition-all shrink-0 group-hover:opacity-90"><Phone size={22} /></div>
+                                <Phone className="shrink-0 md:hidden" size={18} style={{ color: primaryColor }} />
+                                <a href="tel:+919806380757" className="md:text-base text-white font-bold hover:text-emerald-300 transition-colors">+91 9806380757</a>
+                            </li>
+                            <li className="flex items-center gap-3 md:gap-5 group">
+                                <div className="hidden md:flex h-12 w-12 rounded-xl bg-white/10 items-center justify-center text-white transition-all shrink-0 group-hover:opacity-90"><Mail size={22} /></div>
+                                <Mail className="shrink-0 md:hidden" size={18} style={{ color: primaryColor }} />
+                                <a href="mailto:Nikhilkarera@gmail.com" className="md:text-base text-white font-medium hover:text-emerald-300 transition-colors">Nikhilkarera@gmail.com</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div className="border-t border-white/10 mt-12 pt-8 text-center text-sm md:flex md:justify-between md:text-left md:mt-24 md:pt-12">
+                    <p className="md:text-base text-white/60">&copy; {new Date().getFullYear()} {settings?.appName || 'Aahar Jain'}. All rights reserved.</p>
+                    <div className="flex flex-wrap gap-4 sm:gap-6 justify-center md:justify-end mt-4 md:mt-0 md:gap-8 text-xs sm:text-sm">
+                        <Link to="/privacy-policy" className="hover:text-brand-300 text-white/70 transition-all">Privacy Policy</Link>
+                        <Link to="/terms" className="hover:text-brand-300 text-white/70 transition-all">Terms & Conditions</Link>
+                        <Link to="/shipping-policy" className="hover:text-brand-300 text-white/70 transition-all">Shipping Policy</Link>
+                        <Link to="/cancellation-refund-policy" className="hover:text-brand-300 text-white/70 transition-all">Cancellation & Refund</Link>
+                        <Link to="/support" className="hover:text-brand-300 text-white/70 transition-all">Help & Support</Link>
+                        <Link to="/contact-us" className="hover:text-brand-300 text-white/70 transition-all">Contact Us</Link>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    );
+};
+
+export default Footer;
+
+

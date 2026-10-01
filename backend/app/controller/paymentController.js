@@ -1,0 +1,192 @@
+import handleResponse from "../utils/helper.js";
+import {
+  createPaymentOrderForOrderRef,
+  createPaymentOrderForWalletTopup,
+  verifyPhonePePaymentStatus,
+  processPhonePeWebhook,
+} from "../services/paymentService.js";
+import {
+  createPaymentOrderSchema,
+  validateSchema,
+} from "../validation/paymentValidation.js";
+import logger from "../services/logger.js";
+
+function resolvePaymentErrorMessage(error) {
+  const directMessage = String(error?.message || "").trim();
+  if (directMessage) return directMessage;
+
+  const responseStatusText = String(error?.response?.statusText || "").trim();
+  if (responseStatusText) return `Payment gateway error: ${responseStatusText}`;
+
+  const causeCode = String(error?.cause?.code || error?.code || "").trim();
+  if (causeCode) return `Payment gateway request failed (${causeCode})`;
+
+  return "Unable to initiate payment with payment gateway right now";
+}
+
+export const createWalletPaymentOrder = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id || req.user?.userId;
+    const { amount } = req.body || {};
+    const result = await createPaymentOrderForWalletTopup({
+      userId,
+      amount,
+      correlationId: req.correlationId || null,
+    });
+
+    return handleResponse(
+      res,
+      201,
+      "Wallet payment initiated",
+      {
+        payment: result.payment,
+        provider: result.provider,
+        redirectUrl: result.redirectUrl,
+        merchantOrderId: result.merchantOrderId,
+        amount: result.amount,
+        currency: result.currency,
+      },
+    );
+  } catch (error) {
+    logger.error("createWalletPaymentOrder failed", {
+      scope: "PaymentController.createWalletPaymentOrder",
+      message: error?.message,
+      statusCode: error?.statusCode || error?.status || 500,
+    });
+    return handleResponse(
+      res,
+      error.statusCode || error.status || 500,
+      resolvePaymentErrorMessage(error),
+    );
+  }
+};
+
+export const createPaymentOrder = async (req, res) => {
+  try {
+    const payload = validateSchema(createPaymentOrderSchema, req.body || {});
+    const userId = req.user?.id || req.user?._id || req.user?.userId;
+    const result = await createPaymentOrderForOrderRef({
+      orderRef: payload.orderRef || payload.orderId,
+      userId,
+      idempotencyKey: req.headers["idempotency-key"] || null,
+      correlationId: req.correlationId || null,
+    });
+
+    return handleResponse(
+      res,
+      result.duplicate ? 200 : 201,
+      result.duplicate ? "Re-using existing payment" : "Payment initiated",
+      {
+        payment: result.payment,
+        provider: result.provider,
+        redirectUrl: result.redirectUrl,
+        merchantOrderId: result.merchantOrderId || result.payment?.gatewayOrderId,
+        amount: result.amount,
+        currency: result.currency,
+      },
+    );
+  } catch (error) {
+    logger.error("createPaymentOrder failed", {
+      scope: "PaymentController.createPaymentOrder",
+      message: error?.message,
+      statusCode: error?.statusCode || error?.status || 500,
+      code: error?.code || error?.cause?.code || null,
+      responseStatus: error?.response?.status || null,
+      responseStatusText: error?.response?.statusText || null,
+      orderRef: req.body?.orderRef || req.body?.orderId || null,
+      userId: req.user?.id || req.user?._id || req.user?.userId || null,
+      correlationId: req.correlationId || null,
+    });
+    return handleResponse(
+      res,
+      error.statusCode || error.status || 500,
+      resolvePaymentErrorMessage(error),
+    );
+  }
+};
+
+export const verifyPaymentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const merchantOrderId = id || req.query.merchantOrderId;
+
+    if (!merchantOrderId) {
+      return handleResponse(res, 400, "merchantOrderId is required");
+    }
+
+    const userId = req.user?.id || req.user?._id || req.user?.userId;
+    const userRole = req.user?.role || null;
+    const verification = await verifyPhonePePaymentStatus({
+      merchantOrderId,
+      userId,
+      userRole,
+      correlationId: req.correlationId || null,
+    });
+
+    return handleResponse(res, 200, "Payment status verified", {
+      status: verification.status,
+      payment: verification.payment,
+      orderSummary: verification.orderSummary || null,
+    });
+  } catch (error) {
+    return handleResponse(res, error.statusCode || error.status || 500, error.message);
+  }
+};
+
+export const handlePhonePeWebhook = async (req, res) => {
+  try {
+    const authorization = req.headers["x-verify"] || req.headers["authorization"];
+    const rawBody = req.body;
+
+    if (!authorization) {
+      logger.warn("PhonePe webhook missing verification header", {
+        scope: "PaymentController.handlePhonePeWebhook",
+        correlationId: req.correlationId || null,
+        ip: req.ip,
+      });
+      return res.status(401).send("Unauthorized");
+    }
+
+    const result = await processPhonePeWebhook({
+      rawBody,
+      authorization,
+      correlationId: req.correlationId || null,
+    });
+
+    if (result.accepted) {
+      return res.status(200).send("OK");
+    }
+
+    return res.status(400).send("Bad Request");
+  } catch (error) {
+    logger.error("PhonePe webhook processing failed", {
+      scope: "PaymentController.handlePhonePeWebhook",
+      correlationId: req.correlationId || null,
+      message: error?.message,
+      error,
+    });
+    return res.status(500).send("Internal Server Error");
+  }
+};
+
+export const getPaymentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const merchantOrderId = id;
+
+    const verification = await verifyPhonePePaymentStatus({
+      merchantOrderId,
+      userId: req.user?.id,
+      correlationId: req.correlationId || null,
+    });
+
+    return handleResponse(res, 200, "Payment status retrieved", {
+      status: verification.status,
+      merchantOrderId: verification.payment.gatewayOrderId,
+      amount: verification.payment.amount,
+      currency: verification.payment.currency,
+    });
+  } catch (error) {
+    return handleResponse(res, error.statusCode || 500, error.message);
+  }
+};
