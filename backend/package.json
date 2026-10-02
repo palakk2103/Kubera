@@ -5,9 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon index.js",
-    "build": "echo 'No build required'",
-    "start": "node index.js",
+    "dev": "node api.js && nodemon index.js",
+    "build": "node api.js && echo 'No build required'",
+    "start": "node api.js && node index.js",
     "worker": "node worker.js",
     "scheduler": "node scheduler.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
