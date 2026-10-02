@@ -1,4 +1,6 @@
 {
+  "installCommand": "npm install",
+  "buildCommand": "echo 'No build required'",
   "functions": {
     "api/index.js": {
       "memory": 1024,
