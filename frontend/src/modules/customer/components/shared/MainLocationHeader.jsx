@@ -516,20 +516,31 @@ const MainLocationHeader = ({
               <div onClick={() => navigate("/")} className="flex items-center gap-2.5 cursor-pointer">
                 <img
                   src={logoUrl || "/jainaaharlogo-removebg-preview.png"}
-                  alt="Jain Aahar"
+                  alt={appName || "Brand Logo"}
                   className="h-14 w-auto object-contain shrink-0"
+                  onError={(e) => {
+                    if (!e.currentTarget.src.includes("jainaaharlogo-removebg-preview.png")) {
+                      e.currentTarget.src = "/jainaaharlogo-removebg-preview.png";
+                    }
+                  }}
                 />
-                <div className="flex flex-col justify-center text-left">
-                  <span className="text-[18px] font-black text-[#FF8200] leading-none tracking-tight">
-                    Jain
-                  </span>
-                  <span className="text-[18px] font-black text-[#2E7D32] leading-none tracking-tight mt-[1px] ml-2">
-                    Aahar
-                  </span>
-                  <span className="text-[11px] font-black text-[#5D7E68] tracking-wide mt-1 leading-none">
-                    Shudh Saatvik Jain
-                  </span>
-                </div>
+                {(!logoUrl || (appName && appName.toLowerCase() === 'jain aahar')) ? (
+                  <div className="flex flex-col justify-center text-left">
+                    <span className="text-[18px] font-black text-[#FF8200] leading-none tracking-tight">
+                      {appName.toLowerCase() === 'jain aahar' ? 'Jain' : appName}
+                    </span>
+                    {appName.toLowerCase() === 'jain aahar' && (
+                      <>
+                        <span className="text-[18px] font-black text-[#2E7D32] leading-none tracking-tight mt-[1px] ml-2">
+                          Aahar
+                        </span>
+                        <span className="text-[11px] font-black text-[#5D7E68] tracking-wide mt-1 leading-none">
+                          Shudh Saatvik Jain
+                        </span>
+                      </>
+                    )}
+                  </div>
+                ) : null}
               </div>
 
               {/* Right actions: Language Dropdown + Notification Bell Button */}

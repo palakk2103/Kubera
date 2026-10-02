@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@core/context/AuthContext';
 import { UserRole } from '@core/constants/roles';
+import { useSettings } from '@core/context/SettingsContext';
 import { X } from 'lucide-react';
 
 const Login = () => {
+    const { settings } = useSettings();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState(UserRole.CUSTOMER);
@@ -50,8 +52,8 @@ const Login = () => {
 
                 <div className="flex flex-col items-center justify-center">
                     <img 
-                        src="/jainaaharlogo-removebg-preview.png" 
-                        alt="Jain Aahar Logo" 
+                        src={settings?.logoUrl || "/jainaaharlogo-removebg-preview.png"} 
+                        alt={`${settings?.appName || 'App'} Logo`} 
                         className="h-28 w-auto object-contain cursor-pointer" 
                         onClick={() => navigate('/')}
                     />

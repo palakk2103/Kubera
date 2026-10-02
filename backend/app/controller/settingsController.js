@@ -128,7 +128,7 @@ const updateSettingsSchema = Joi.object({
   productApproval: Joi.object({
     sellerCreateRequiresApproval: Joi.boolean(),
     sellerEditRequiresApproval: Joi.boolean(),
-  }).unknown(false),
+  }).unknown(true),
   categoriesBanner: Joi.object({
     image: Joi.string().allow("").max(2000),
     badgeText: Joi.string().allow("").max(100),
@@ -136,12 +136,13 @@ const updateSettingsSchema = Joi.object({
     buttonText: Joi.string().allow("").max(100),
     buttonLink: Joi.string().allow("").max(500),
     isVisible: Joi.boolean(),
-  }).unknown(false),
+    banners: Joi.array().items(Joi.object().unknown(true)),
+  }).unknown(true),
   homeVideoBanner: Joi.object({
     videoUrl: Joi.string().allow("").max(2000),
     isVisible: Joi.boolean(),
-  }).unknown(false),
-}).unknown(false);
+  }).unknown(true),
+}).unknown(true);
 
 /**
  * GET /api/settings (public)
@@ -161,7 +162,7 @@ export const getPublicSettings = async (req, res) => {
       async () => {
         const existing = await Setting.findOne(filter)
           .select(
-            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled lowStockAlertsEnabled productApproval categoriesBanner homeVideoBanner createdAt",
+            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor companyName taxId address facebook twitter instagram linkedin youtube playStoreLink appStoreLink metaTitle metaDescription metaKeywords keywords returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled lowStockAlertsEnabled productApproval categoriesBanner homeVideoBanner createdAt",
           )
           .lean();
         return existing || null;

@@ -47,7 +47,6 @@ export {
 export const adminApi = {
     ...adminAuthApi,
     ...adminUsersApi,
-    ...adminSettingsApi,
     ...adminFinanceApi,
     ...adminCatalogApi,
     ...adminOrdersApi,
@@ -57,6 +56,7 @@ export const adminApi = {
     ...adminSOSApi,
     ...adminStoreApi,
     ...adminWhatsappApi,
+    ...adminSettingsApi,
 };
 
 export default adminApi;

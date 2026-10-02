@@ -13,24 +13,46 @@ import { DEFAULT_SETTINGS, applyThemeVariables } from "./SettingsDefaults";
 // Create context with null so we can check if it's provided
 const SettingsContext = createContext(null);
 
+const getInitialSettings = () => {
+  try {
+    const cached = typeof window !== "undefined" ? localStorage.getItem("app_settings_cache") : null;
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && typeof parsed === "object") {
+        return { ...DEFAULT_SETTINGS, ...parsed };
+      }
+    }
+  } catch (_) {}
+  return DEFAULT_SETTINGS;
+};
+
 export const SettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState(getInitialSettings);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Apply theme variables immediately on mount from initial settings
+  useEffect(() => {
+    applyThemeVariables(settings);
+  }, []);
 
   const fetchSettings = useCallback(async (options = {}) => {
     try {
-      setLoading(true);
       setError(null);
       // Use deduplicated fetch for app settings
-      const res = await getWithDedupe("/settings", {}, { 
-        ttl: 60 * 1000,
-        forceRefresh: options.forceRefresh || false 
+      const res = await getWithDedupe("/settings", { _t: Date.now() }, { 
+        ttl: 5 * 1000,
+        forceRefresh: true 
       });
       const data = res.data?.result || res.data;
-      const merged = { ...DEFAULT_SETTINGS, ...data };
-      setSettings(merged);
-      applyThemeVariables(merged);
+      if (data && typeof data === "object") {
+        const merged = { ...DEFAULT_SETTINGS, ...data };
+        setSettings(merged);
+        applyThemeVariables(merged);
+        try {
+          localStorage.setItem("app_settings_cache", JSON.stringify(merged));
+        } catch (_) {}
+      }
     } catch (err) {
       console.error("Failed to fetch settings", err);
       setError(
@@ -38,8 +60,6 @@ export const SettingsProvider = ({ children }) => {
           err.message ||
           "Failed to load settings",
       );
-      setSettings(DEFAULT_SETTINGS);
-      applyThemeVariables(DEFAULT_SETTINGS);
     } finally {
       setLoading(false);
     }

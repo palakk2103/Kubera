@@ -9,7 +9,7 @@ const settingSchema = new mongoose.Schema(
         // General
         appName: {
             type: String,
-            default: "Jain Aahar",
+            default: "Kubera",
         },
         supportEmail: {
             type: String,
@@ -47,7 +47,7 @@ const settingSchema = new mongoose.Schema(
         // Legal
         companyName: {
             type: String,
-            default: "JAINA ENTERPRISES",
+            default: "Kubera",
         },
         taxId: String,
         address: {
@@ -204,6 +204,7 @@ const settingSchema = new mongoose.Schema(
                 type: Boolean,
                 default: true,
             },
+            banners: [mongoose.Schema.Types.Mixed],
         },
         homeVideoBanner: {
             videoUrl: {

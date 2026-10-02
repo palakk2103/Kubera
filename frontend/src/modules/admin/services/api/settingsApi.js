@@ -15,7 +15,7 @@ export const adminSettingsApi = {
         axiosInstance.put('/admin/settings/delivery', data),
 
     // Centralized settings (public GET, admin PUT)
-    getSettings: () => axiosInstance.get('/settings'),
+    getSettings: () => axiosInstance.get(`/settings?_t=${Date.now()}`),
     updateSettings: (data) => axiosInstance.put('/settings', data),
     uploadSettingsImage: (formData, type = 'logo') =>
         axiosInstance.post(`/settings/upload?type=${type}`, formData),

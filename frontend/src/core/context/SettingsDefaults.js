@@ -1,6 +1,6 @@
 /** Default fallbacks when settings are not yet loaded or API fails */
 export const DEFAULT_SETTINGS = {
-  appName: "Jain Aahar",
+  appName: "Kubera",
   supportEmail: "",
   supportPhone: "",
   currencySymbol: "\u20B9",
@@ -8,9 +8,9 @@ export const DEFAULT_SETTINGS = {
   timezone: "Asia/Kolkata",
   logoUrl: "",
   faviconUrl: "",
-  primaryColor: "var(--primary)",
+  primaryColor: "#0ea5e9",
   secondaryColor: "#64748b",
-  companyName: "JAINA ENTERPRISES",
+  companyName: "Kubera",
   taxId: "",
   address: "Flat/Door/Block No. 00, SITA CENTRAL SCHOOL,\nKarera, Road/Street/Lane KARERA,\nDistrict SHIVPURI, MADHYA PRADESH - 473660",
   facebook: "",

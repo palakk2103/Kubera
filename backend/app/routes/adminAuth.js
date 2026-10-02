@@ -86,21 +86,21 @@ router.post("/login", authRouteRateLimiter, smallAdminPayload, loginAdmin);
 router.get(
     "/profile",
     verifyToken,
-    allowRoles("admin"),
+    allowRoles("admin", "superadmin", "assistant", "manager"),
     getAdminProfile
 );
 
 router.put(
     "/profile",
     verifyToken,
-    allowRoles("admin"),
+    allowRoles("admin", "superadmin", "assistant", "manager"),
     updateAdminProfile
 );
 
 router.put(
     "/profile/password",
     verifyToken,
-    allowRoles("admin"),
+    allowRoles("admin", "superadmin", "assistant", "manager"),
     updateAdminPassword
 );
 

@@ -28,7 +28,7 @@ const ROLE_TO_STORAGE_KEY = {
 function tokenForRequestUrl(url) {
     if (!url) return null;
     if (url.startsWith('/seller')) return getStoredAuthToken(STORAGE_KEYS.AUTH_SELLER);
-    if (url.startsWith('/admin')) return getStoredAuthToken(STORAGE_KEYS.AUTH_ADMIN);
+    if (url.startsWith('/admin') || url.startsWith('/settings')) return getStoredAuthToken(STORAGE_KEYS.AUTH_ADMIN);
     if (url.startsWith('/delivery')) return getStoredAuthToken(STORAGE_KEYS.AUTH_DELIVERY);
     if (url.startsWith('/warehouse')) {
         return getStoredAuthToken(STORAGE_KEYS.AUTH_WAREHOUSE) || getStoredAuthToken(STORAGE_KEYS.AUTH_ADMIN);
@@ -75,8 +75,8 @@ axiosInstance.interceptors.request.use(
         const primaryStorageKey = ROLE_TO_STORAGE_KEY[activeRole];
         let token = primaryStorageKey ? getStoredAuthToken(primaryStorageKey) : null;
 
-        // If request is explicitly targeting an admin endpoint, prioritize the admin token
-        if (url.startsWith('/admin')) {
+        // If request is explicitly targeting an admin or settings endpoint, prioritize the admin token
+        if (url.startsWith('/admin') || url.startsWith('/settings')) {
             const adminToken = getStoredAuthToken(STORAGE_KEYS.AUTH_ADMIN);
             if (adminToken) {
                 token = adminToken;

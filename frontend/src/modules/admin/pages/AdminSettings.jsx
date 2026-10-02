@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Card from '@shared/components/ui/Card';
 import {
     Save,
@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@shared/components/ui/Toast';
-import { adminApi } from '../services/adminApi';
+import { adminSettingsApi } from '../services/api/settingsApi';
 import { useSettings } from '@core/context/SettingsContext';
 
 const AdminSettings = () => {
@@ -39,9 +39,26 @@ const AdminSettings = () => {
 
     const { refetch } = useSettings();
     const { showToast } = useToast();
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('general');
+
+    const initialTab = searchParams.get('tab') || (typeof window !== 'undefined' ? localStorage.getItem('admin_settings_active_tab') : null) || 'general';
+    const [activeTab, setActiveTabState] = useState(initialTab);
+
+    const setActiveTab = (tab) => {
+        setActiveTabState(tab);
+        try {
+            localStorage.setItem('admin_settings_active_tab', tab);
+        } catch (_) {}
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('tab', tab);
+            return next;
+        }, { replace: true });
+    };
+
     const [logoUploading, setLogoUploading] = useState(false);
     const [faviconUploading, setFaviconUploading] = useState(false);
     const logoInputRef = useRef(null);
@@ -49,7 +66,7 @@ const AdminSettings = () => {
 
     /** @type {any} */
     const defaultSettings = {
-        appName: '',
+        appName: 'Kubera',
         supportEmail: '',
         supportPhone: '',
         currencySymbol: '₹',
@@ -57,9 +74,9 @@ const AdminSettings = () => {
         timezone: 'Asia/Kolkata',
         logoUrl: '',
         faviconUrl: '',
-        primaryColor: 'var(--primary)',
+        primaryColor: '#0ea5e9',
         secondaryColor: '#64748b',
-        companyName: '',
+        companyName: 'Kubera',
         taxId: '',
         address: '',
         facebook: '',
@@ -92,29 +109,47 @@ const AdminSettings = () => {
             isVisible: false,
         },
     };
-    const [settings, setSettings] = useState(defaultSettings);
+
+    const getInitialSettings = () => {
+        try {
+            const cached = typeof window !== 'undefined' ? localStorage.getItem('admin_settings_form_cache') : null;
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (parsed && typeof parsed === 'object') {
+                    return { ...defaultSettings, ...parsed };
+                }
+            }
+        } catch (_) {}
+        return defaultSettings;
+    };
+
+    const [settings, setSettings] = useState(getInitialSettings);
 
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const res = await adminApi.getSettings();
+                const res = await adminSettingsApi.getSettings();
                 const data = res.data?.result ?? res.data;
                 if (data) {
-                    setSettings(prev => ({
-                        ...prev,
+                    const merged = {
+                        ...defaultSettings,
                         ...data,
                         productApproval: normalizeProductApprovalConfig(data || {}),
                         keywords: Array.isArray(data.keywords) ? data.keywords : (data.metaKeywords ? data.metaKeywords.split(',').map(k => k.trim()).filter(Boolean) : []),
                         returnDeliveryCommission: data.returnDeliveryCommission ?? 0,
                         categoriesBanner: {
-                            ...prev.categoriesBanner,
+                            ...defaultSettings.categoriesBanner,
                             ...(data.categoriesBanner || {}),
                         },
                         homeVideoBanner: {
-                            ...prev.homeVideoBanner,
+                            ...defaultSettings.homeVideoBanner,
                             ...(data.homeVideoBanner || {}),
                         },
-                    }));
+                    };
+                    setSettings(merged);
+                    try {
+                        localStorage.setItem('admin_settings_form_cache', JSON.stringify(merged));
+                    } catch (_) {}
                 }
             } catch (error) {
                 console.error("Failed to load settings", error);
@@ -133,21 +168,26 @@ const AdminSettings = () => {
                 ...settings,
                 keywords: Array.isArray(settings.keywords) ? settings.keywords : (settings.metaKeywords ? settings.metaKeywords.split(',').map(k => k.trim()).filter(Boolean) : []),
             };
-            const res = await adminApi.updateSettings(payload);
+            const res = await adminSettingsApi.updateSettings(payload);
             const updatedData = res.data?.result ?? res.data;
             
             if (updatedData) {
-                setSettings(prev => ({
-                    ...prev,
+                const merged = {
+                    ...settings,
                     ...updatedData,
                     productApproval: normalizeProductApprovalConfig(updatedData),
-                }));
+                };
+                setSettings(merged);
+                try {
+                    localStorage.setItem('admin_settings_form_cache', JSON.stringify(merged));
+                } catch (_) {}
             }
             await refetch({ forceRefresh: true });
             showToast('Settings updated successfully', 'success');
         } catch (error) {
             console.error("Failed to update settings", error);
-            showToast('Failed to update settings', 'error');
+            const msg = error.response?.data?.message || error.message || 'Failed to update settings';
+            showToast(msg, 'error');
         } finally {
             setIsSaving(false);
         }
@@ -178,11 +218,23 @@ const AdminSettings = () => {
         try {
             const fd = new FormData();
             fd.append('image', file);
-            const res = await adminApi.uploadSettingsImage(fd, 'logo');
+            const res = await adminSettingsApi.uploadSettingsImage(fd, 'logo');
             const url = res.data?.result?.url || res.data?.url;
             if (url) {
                 handleInputChange('logoUrl', url);
-                showToast('Logo uploaded. Click Save Changes to apply.', 'success');
+                const nextSettings = { ...settings, logoUrl: url };
+                setSettings(nextSettings);
+                try {
+                    localStorage.setItem('admin_settings_form_cache', JSON.stringify(nextSettings));
+                } catch (_) {}
+                try {
+                    await adminSettingsApi.updateSettings(nextSettings);
+                    await refetch({ forceRefresh: true });
+                    showToast('Logo uploaded and saved successfully!', 'success');
+                } catch (persistErr) {
+                    console.error("Auto-save failed:", persistErr);
+                    showToast('Logo uploaded. Click Save Changes to apply.', 'info');
+                }
             } else throw new Error('No URL returned');
         } catch (err) {
             console.error(err);
@@ -204,11 +256,23 @@ const AdminSettings = () => {
         try {
             const fd = new FormData();
             fd.append('image', file);
-            const res = await adminApi.uploadSettingsImage(fd, 'favicon');
+            const res = await adminSettingsApi.uploadSettingsImage(fd, 'favicon');
             const url = res.data?.result?.url || res.data?.url;
             if (url) {
                 handleInputChange('faviconUrl', url);
-                showToast('Favicon uploaded. Click Save Changes to apply.', 'success');
+                const nextSettings = { ...settings, faviconUrl: url };
+                setSettings(nextSettings);
+                try {
+                    localStorage.setItem('admin_settings_form_cache', JSON.stringify(nextSettings));
+                } catch (_) {}
+                try {
+                    await adminSettingsApi.updateSettings(nextSettings);
+                    await refetch({ forceRefresh: true });
+                    showToast('Favicon uploaded and saved successfully!', 'success');
+                } catch (persistErr) {
+                    console.error("Auto-save failed:", persistErr);
+                    showToast('Favicon uploaded. Click Save Changes to apply.', 'info');
+                }
             } else throw new Error('No URL returned');
         } catch (err) {
             console.error(err);
@@ -243,7 +307,7 @@ const AdminSettings = () => {
         try {
             const fd = new FormData();
             fd.append('image', file);
-            const res = await adminApi.uploadSettingsImage(fd, 'categoriesBanner');
+            const res = await adminSettingsApi.uploadSettingsImage(fd, 'categoriesBanner');
             const url = res.data?.result?.url || res.data?.url;
             if (url) {
                 handleBannerChange('image', url);
@@ -286,7 +350,7 @@ const AdminSettings = () => {
         try {
             const fd = new FormData();
             fd.append('image', file); // Multer uses 'image' or 'file' in settings API
-            const res = await adminApi.uploadSettingsImage(fd, 'homeVideoBanner');
+            const res = await adminSettingsApi.uploadSettingsImage(fd, 'homeVideoBanner');
             const url = res.data?.result?.url || res.data?.url;
             if (url) {
                 handleVideoBannerChange('videoUrl', url);
@@ -384,21 +448,59 @@ const AdminSettings = () => {
                     {/* General Settings */}
                     {activeTab === 'general' && (
                         <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl overflow-hidden">
-                            <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+                            <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
                                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
                                     General Information
                                 </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('branding')}
+                                    className="text-xs font-bold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all"
+                                >
+                                    <Globe className="h-3.5 w-3.5" />
+                                    Edit Branding & Logo
+                                </button>
                             </div>
-                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">App Name</label>
-                                    <input
-                                        type="text"
-                                        value={settings.appName}
-                                        onChange={(e) => handleInputChange('appName', e.target.value)}
-                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
-                                    />
+                            <div className="p-8 space-y-6">
+                                {/* Branding Quick Preview Banner */}
+                                <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-brand-50/30 border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-14 w-14 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center p-1.5 overflow-hidden">
+                                            {settings.logoUrl ? (
+                                                <img src={settings.logoUrl} alt="Active Logo" className="h-full w-full object-contain" />
+                                            ) : (
+                                                <span className="text-xs font-black text-slate-400">No Logo</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-slate-400 uppercase tracking-wider">Active Brand</p>
+                                            <h4 className="text-base font-black text-slate-900 leading-tight">
+                                                {settings.appName || 'Kubera'}
+                                            </h4>
+                                            <p className="text-[11px] font-medium text-slate-500">
+                                                {settings.logoUrl ? 'Custom logo active' : 'Default text branding active'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('branding')}
+                                        className="text-xs font-black text-white bg-black hover:bg-slate-800 px-4 py-2.5 rounded-xl shadow-sm transition-all"
+                                    >
+                                        Change Logo / Colors →
+                                    </button>
                                 </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">App Name</label>
+                                        <input
+                                            type="text"
+                                            value={settings.appName}
+                                            onChange={(e) => handleInputChange('appName', e.target.value)}
+                                            className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                        />
+                                    </div>
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Support Email</label>
                                     <div className="relative group">
@@ -508,6 +610,7 @@ const AdminSettings = () => {
                                     </button>
                                 </div>
                             </div>
+                            </div>
                         </Card>
                     )}
 
@@ -522,6 +625,18 @@ const AdminSettings = () => {
                             <div className="p-8 space-y-8">
                                 <input type="file" ref={logoInputRef} accept="image/*" className="hidden" onChange={handleLogoUpload} />
                                 <input type="file" ref={faviconInputRef} accept="image/*" className="hidden" onChange={handleFaviconUpload} />
+                                
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">App / Platform Name</label>
+                                    <input
+                                        type="text"
+                                        value={settings.appName}
+                                        onChange={(e) => handleInputChange('appName', e.target.value)}
+                                        placeholder="e.g. OrangeBasket"
+                                        className="w-full px-5 py-3.5 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all placeholder:text-slate-400"
+                                    />
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">App Logo</label>
@@ -595,7 +710,7 @@ const AdminSettings = () => {
                                     <div className="flex items-center gap-4">
                                         <input
                                             type="color"
-                                            value={settings.primaryColor}
+                                            value={typeof settings.primaryColor === 'string' && /^#[0-9A-Fa-f]{6}$/.test(settings.primaryColor) ? settings.primaryColor : '#0ea5e9'}
                                             onChange={(e) => handleInputChange('primaryColor', e.target.value)}
                                             className="h-12 w-24 rounded-lg cursor-pointer bg-transparent"
                                         />
@@ -612,7 +727,7 @@ const AdminSettings = () => {
                                     <div className="flex items-center gap-4">
                                         <input
                                             type="color"
-                                            value={settings.secondaryColor}
+                                            value={typeof settings.secondaryColor === 'string' && /^#[0-9A-Fa-f]{6}$/.test(settings.secondaryColor) ? settings.secondaryColor : '#64748b'}
                                             onChange={(e) => handleInputChange('secondaryColor', e.target.value)}
                                             className="h-12 w-24 rounded-lg cursor-pointer bg-transparent"
                                         />
@@ -623,6 +738,21 @@ const AdminSettings = () => {
                                             className="w-full px-5 py-3 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-mono"
                                         />
                                     </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={handleSave}
+                                        disabled={isSaving}
+                                        className={cn(
+                                            "flex items-center gap-2 px-6 py-3.5 bg-black hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95",
+                                            isSaving && "opacity-70 cursor-wait"
+                                        )}
+                                    >
+                                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                                        {isSaving ? 'Updating...' : 'Save Branding Changes'}
+                                    </button>
                                 </div>
                             </div>
                         </Card>
