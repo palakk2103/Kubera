@@ -73,6 +73,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
   return (
     <div className="space-y-8">
       {sections.map((section, sectionIndex) => {
+        if (!section || section.status === "inactive") return null;
         const sectionKey = String(
           section?._id || section?.id || `${section?.displayType || "section"}-${sectionIndex}`
         );
