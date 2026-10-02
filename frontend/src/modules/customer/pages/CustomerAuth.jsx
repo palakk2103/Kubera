@@ -205,7 +205,7 @@ const CustomerAuth = () => {
                 {/* Logo */}
                 <div className="flex flex-col items-center justify-center mb-5 -mt-1">
                     <img 
-                        src={settings?.logoUrl || "/jainaaharlogo-removebg-preview.png"} 
+                        src="/uber-removebg-preview.png" 
                         alt={`${appName} Logo`} 
                         className="h-24 w-auto object-contain cursor-pointer hover:opacity-90 transition-opacity" 
                         onClick={() => navigate('/')}

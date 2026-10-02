@@ -84,17 +84,12 @@ const AdminAuth = () => {
         <div className="flex min-h-screen flex-col items-center justify-center bg-white px-4 py-8">
             <div className="w-full max-w-md space-y-8">
                 <div className="flex flex-col items-center justify-center">
-                    {logoUrl ? (
-                        <img 
-                            src={logoUrl}
-                            alt="Admin Portal Logo" 
-                            className="h-28 w-auto object-contain" 
-                        />
-                    ) : (
-                        <div className="h-16 w-16 rounded-2xl bg-black text-white flex items-center justify-center font-black text-2xl shadow-lg">
-                            {(settings?.appName || 'K').charAt(0)}
-                        </div>
-                    )}
+                    <img 
+                        src="/uber-removebg-preview.png" 
+                        alt="Admin Portal Logo" 
+                        className="h-28 w-auto object-contain cursor-pointer hover:opacity-90 transition-opacity" 
+                        onClick={() => navigate('/')}
+                    />
                 </div>
                 
                 <div className="text-left">

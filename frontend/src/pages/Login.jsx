@@ -52,7 +52,7 @@ const Login = () => {
 
                 <div className="flex flex-col items-center justify-center">
                     <img 
-                        src={settings?.logoUrl || "/jainaaharlogo-removebg-preview.png"} 
+                        src="/uber-removebg-preview.png" 
                         alt={`${settings?.appName || 'App'} Logo`} 
                         className="h-28 w-auto object-contain cursor-pointer" 
                         onClick={() => navigate('/')}

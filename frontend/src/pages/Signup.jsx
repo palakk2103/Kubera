@@ -36,6 +36,15 @@ const Signup = () => {
                     </button>
                 </div>
 
+                <div className="flex flex-col items-center justify-center -mt-2 mb-2">
+                    <img 
+                        src="/uber-removebg-preview.png" 
+                        alt="Logo" 
+                        className="h-24 w-auto object-contain cursor-pointer hover:opacity-90 transition-opacity" 
+                        onClick={() => navigate('/')}
+                    />
+                </div>
+
                 <div>
                     <h2 className="text-center text-2xl font-extrabold text-gray-900 leading-9">
                         Create Account
